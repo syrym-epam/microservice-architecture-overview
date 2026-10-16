@@ -30,6 +30,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5   
+    # Emulator S3 Storage
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566" # LocalStack Gateway
+    environment:
+      - SERVICES=s3
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
   eureka-service:
     build:
       context: ./eureka-server
@@ -54,6 +65,9 @@ services:
       - SPRING_DATASOURCE_URL=${RESOURCE_SERVICE_DATASOURCE_URL}
       - SONG_SERVICE_URL=${SONG_SERVICE_URL}
       - EUREKA_SERVICE_URL=${EUREKA_SERVICE_URL}
+      - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     ports:
       - "8081:8081"
     depends_on:
@@ -76,6 +90,7 @@ services:
     depends_on:
       song-db:
         condition: service_healthy
+
 
 
 # For resource-service:
