@@ -1,11 +1,17 @@
 package com.microservice.resource_processor;
 
+import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
+import java.util.Optional;
+
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.parser.mp3.Mp3Parser;
+import org.apache.tika.sax.BodyContentHandler;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ServiceResourceProcessor {
-
-    Metadata metadata = extractMetadataFromMP3File(data);
-
 
     public Metadata makeMetadataFromClass(Object obj) {
         Metadata metadata = new Metadata();
