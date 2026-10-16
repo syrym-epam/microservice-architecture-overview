@@ -1,8 +1,5 @@
 package com.microservice.resource_service;
 
-import java.sql.Types;
-
-import org.hibernate.annotations.JdbcTypeCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,7 +18,6 @@ public class EntityResource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @JdbcTypeCode(Types.BINARY)
-    @Column(name = "file_data", columnDefinition = "BYTEA")
-    byte[] fileData;
+    @Column(name = "file_name") 
+    String fileName;
 }

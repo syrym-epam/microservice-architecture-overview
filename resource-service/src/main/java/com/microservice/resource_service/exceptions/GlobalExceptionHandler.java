@@ -149,4 +149,19 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(errorResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     } 
+
+
+    @ExceptionHandler(DataReadErrorException.class)
+    public ResponseEntity<ErrorResponseDTO> dataReadError(DataReadErrorException ex) {
+        ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
+            "" + HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            ex.getMessage()
+        );
+
+        return new ResponseEntity<>(errorResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+
+
+    
 }

@@ -28,3 +28,11 @@ eureka:
     lease-renewal-interval-in-seconds: 5
 song-service:
   url: "${SONG_SERVICE_URL:http://localhost:8082}"
+  
+# CLOUD STORAGE
+aws:
+  region: us-east-1
+  backet_name: resource-service
+  access_id: "${AWS_ACCESS_KEY_ID:test}"
+  access_key: "${AWS_SECRET_ACCESS_KEY:test}"
+  localstack-endpoint: "${LOCALSTACK_ENDPOINT:http://localhost:4566}"

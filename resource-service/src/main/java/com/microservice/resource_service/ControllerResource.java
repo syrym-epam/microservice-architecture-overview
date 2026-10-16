@@ -53,11 +53,10 @@ public class ControllerResource {
             @Positive(message = "Invalid value '%s' for ID. Must be a positive integer")
             @PathVariable 
             Long id) {
-        EntityResource entityResource = serviceResource.getResource(id);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .contentType(MediaType.valueOf(MEDIA_TYPE_MP3))
-                .body(entityResource.getFileData());
+                .body(serviceResource.getResource(id));
     }
     
     @DeleteMapping()
