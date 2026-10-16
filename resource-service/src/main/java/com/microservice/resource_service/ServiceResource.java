@@ -20,14 +20,20 @@ import com.microservice.resource_service.exceptions.DataNotFoundException;
 import com.microservice.resource_service.exceptions.DataReadErrorException;
 import com.microservice.resource_service.exceptions.MetaDataFieldResourceNotFoundException;
 import com.microservice.resource_service.exceptions.RestTemplateErrorException;
+import com.microservice.resource_service.exceptions.S3AWSExceptions;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import jakarta.annotation.PostConstruct;
@@ -226,12 +232,35 @@ public class ServiceResource {
     @Transactional
     public List<Long> deleteAllResourceByIDs(String data) {
         List<Long> Ids = Arrays.stream(data.split(",")).map(Long::valueOf).toList();
-        List<Long> existingIds = repositoryResource.findExistingIds(Ids);
+        // List<Long> existingIds = repositoryResource.findExistingIds(Ids);
+
+        List<EntityResource> entityResources = repositoryResource.findAllById(Ids);
+        List<Long> existingIds = entityResources.stream().map(entity -> entity.id).toList();
 
         if (!existingIds.isEmpty()) {
+
+            List<ObjectIdentifier> fileNames = entityResources.stream()
+                    .map(entity -> ObjectIdentifier
+                            .builder()
+                            .key(entity.fileName)
+                            .build())
+                    .toList();
+            Delete delete = Delete.builder()
+                    .objects(fileNames)
+                    .quiet(false)
+                    .build();
+
+            DeleteObjectsRequest request = DeleteObjectsRequest.builder()
+                    .bucket(bucketName)
+                    .delete(delete)
+                    .build();
+
             try {
+                s3Client.deleteObjects(request);
                 String result = existingIds.stream().map(String::valueOf).collect(Collectors.joining(","));
                 restTemplate.delete(discoveryClient.getInstances("SONG-SERVICE").getFirst().getUri() + "/songs?id=" + result);
+            } catch (S3Exception e) {
+                throw new S3AWSExceptions(e.getMessage());
             } catch (Exception e) {
                 throw new RestTemplateErrorException(e.getMessage());
             }

@@ -162,6 +162,13 @@ public class GlobalExceptionHandler {
     }
 
 
+    @ExceptionHandler(S3AWSExceptions.class)
+    public ResponseEntity<ErrorResponseDTO> dataReadError(S3AWSExceptions ex) {
+        ErrorResponseDTO errorResponseDTO = new ErrorResponseDTO(
+            "" + HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            ex.getMessage()
+        );
 
-    
+        return new ResponseEntity<>(errorResponseDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
