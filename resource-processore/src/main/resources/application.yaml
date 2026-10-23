@@ -1,0 +1,23 @@
+server:
+  port: 8085
+spring:
+  application:
+    name: resource-processore
+  kafka:
+    bootstrap-servers: "${KAFKA_SERVICE_URL:http://localhost:9092}"
+    consumer:
+      group-id: microservice
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+eureka:
+  client:
+    service-url: 
+      defaultZone: "${EUREKA_SERVICE_URL:http://localhost:8761/eureka}"
+    registry-fetch-interval-seconds: 5
+  instance:
+    lease-renewal-interval-in-seconds: 5
+resource-service:
+  url: "${RESOURCE_SERVICE_URL:http://localhost:8081}"
+song-service:
+  url: "${SONG_SERVICE_URL:http://localhost:8082}"

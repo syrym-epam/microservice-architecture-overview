@@ -14,11 +14,9 @@ import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.client.RestTemplate;
 
-import com.microservice.resource_service.dto.EntitySongDTO;
 import com.microservice.resource_service.exceptions.ContentTypeException;
 import com.microservice.resource_service.exceptions.DataNotFoundException;
 import com.microservice.resource_service.exceptions.DataReadErrorException;
-import com.microservice.resource_service.exceptions.MetaDataFieldResourceNotFoundException;
 import com.microservice.resource_service.exceptions.RestTemplateErrorException;
 import com.microservice.resource_service.exceptions.S3AWSExceptions;
 
@@ -27,9 +25,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.Delete;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
@@ -41,7 +37,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 
 import java.util.UUID;
-import java.util.function.Predicate;
 
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.ParseContext;
@@ -62,14 +57,17 @@ public class ServiceResource {
     private RepositoryResource repositoryResource;
     private final RestTemplate restTemplate;
     private final DiscoveryClient discoveryClient;
+    private final KafkaProducerService kafkaProducerService;
     
     public ServiceResource(RepositoryResource repositoryResource,
          DiscoveryClient discoveryClient,
-        S3Client s3Client) {
+        S3Client s3Client,
+        KafkaProducerService kafkaProducerService) {
         this.repositoryResource = repositoryResource;
         this.restTemplate = new RestTemplate();
         this.discoveryClient = discoveryClient;
         this.s3Client = s3Client;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @PostConstruct
@@ -105,32 +103,6 @@ public class ServiceResource {
     @Transactional
     public Long saveResource(byte[] data) throws IOException {
 
-        Metadata metadata = extractMetadataFromMP3File(data);
-
-        EntitySongDTO entitySongDTO = new EntitySongDTO();
-        entitySongDTO.setName(
-                Optional.ofNullable(metadata.get("dc:title"))
-                        .filter(Predicate.not(String::isBlank))
-                        .orElseThrow(() -> new MetaDataFieldResourceNotFoundException("title")));
-        entitySongDTO.setArtist( 
-                Optional.ofNullable(metadata.get("xmpDM:artist"))
-                        .or(() -> Optional.ofNullable(metadata.get("author")))
-                        .filter(Predicate.not(String::isBlank))
-                        .orElseThrow(() -> new MetaDataFieldResourceNotFoundException("artist")));
-        entitySongDTO.setAlbum(
-                Optional.ofNullable(metadata.get("xmpDM:album"))
-                        .filter(Predicate.not(String::isBlank))
-                        .orElseThrow(() -> new MetaDataFieldResourceNotFoundException("album")));
-        entitySongDTO.setYear(
-                Optional.ofNullable(metadata.get("xmpDM:releaseDate"))
-                        .or(() -> Optional.ofNullable(metadata.get("xmpDM:Year recorded")))
-                        .or(() -> Optional.ofNullable(metadata.get("xmpDM:releaseDate")))
-                        .or(() -> Optional.ofNullable(metadata.get("xmpDM:year")))
-                        .filter(Predicate.not(String::isBlank))
-                        .orElseThrow(() -> new MetaDataFieldResourceNotFoundException("year")));
-        entitySongDTO.setDuration(calcDurationMP3(metadata.get("xmpDM:duration"))
-                        .orElseThrow(() -> new MetaDataFieldResourceNotFoundException("duration")));
-
         String fileName = UUID.randomUUID().toString();
         
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -146,13 +118,7 @@ public class ServiceResource {
         entityResource.setFileName(fileName);
         entityResource = repositoryResource.save(entityResource);
 
-        entitySongDTO.setId(entityResource.getId());
-
-        try {
-            restTemplate.postForObject(discoveryClient.getInstances("SONG-SERVICE").getFirst().getUri() + "/songs", entitySongDTO, EntitySongDTO.class);
-        } catch (Exception e) {
-            throw new RestTemplateErrorException(e.getMessage());
-        }
+        kafkaProducerService.sendMessage(entityResource.getId().toString());
 
         return entityResource.getId();
     }
