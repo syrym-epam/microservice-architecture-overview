@@ -1,4 +1,4 @@
-package com.microservice.resource_service;
+package com.microservice.resource_service.services;
 
 
 import org.springframework.kafka.core.KafkaTemplate;

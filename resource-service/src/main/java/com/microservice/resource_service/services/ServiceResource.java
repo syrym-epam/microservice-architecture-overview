@@ -1,4 +1,4 @@
-package com.microservice.resource_service;
+package com.microservice.resource_service.services;
 
 
 import java.io.ByteArrayInputStream;
@@ -14,11 +14,13 @@ import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.client.RestTemplate;
 
+import com.microservice.resource_service.entities.EntityResource;
 import com.microservice.resource_service.exceptions.ContentTypeException;
 import com.microservice.resource_service.exceptions.DataNotFoundException;
 import com.microservice.resource_service.exceptions.DataReadErrorException;
 import com.microservice.resource_service.exceptions.RestTemplateErrorException;
 import com.microservice.resource_service.exceptions.S3AWSExceptions;
+import com.microservice.resource_service.repositories.RepositoryResource;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -148,7 +150,7 @@ public class ServiceResource {
             return s3Stream.readAllBytes();
         } catch (IOException e) {
             throw new DataReadErrorException(
-                    "Failed to read file bytes from S3: %s".formatted(entityResource.fileName));
+                    "Failed to read file bytes from S3: %s".formatted(entityResource.getFileName()));
         }
     }
 
@@ -201,14 +203,14 @@ public class ServiceResource {
         // List<Long> existingIds = repositoryResource.findExistingIds(Ids);
 
         List<EntityResource> entityResources = repositoryResource.findAllById(Ids);
-        List<Long> existingIds = entityResources.stream().map(entity -> entity.id).toList();
+        List<Long> existingIds = entityResources.stream().map(entity -> entity.getId()).toList();
 
         if (!existingIds.isEmpty()) {
 
             List<ObjectIdentifier> fileNames = entityResources.stream()
                     .map(entity -> ObjectIdentifier
                             .builder()
-                            .key(entity.fileName)
+                            .key(entity.getFileName())
                             .build())
                     .toList();
             Delete delete = Delete.builder()

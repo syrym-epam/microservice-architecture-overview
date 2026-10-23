@@ -5,8 +5,10 @@ import java.util.Arrays;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import com.microservice.song_service.dto.EntitySongDTO;
+import com.microservice.song_service.entities.EntitySong;
 import com.microservice.song_service.exceptions.DataNotFoundException;
 import com.microservice.song_service.exceptions.MetaDataExistExceptions;
+import com.microservice.song_service.repositories.RepositorySong;
 
 import jakarta.transaction.Transactional;
 
