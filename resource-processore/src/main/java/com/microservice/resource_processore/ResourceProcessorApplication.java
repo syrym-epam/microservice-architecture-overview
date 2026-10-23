@@ -1,4 +1,4 @@
-package com.microservice.resource_processor;
+package com.microservice.resource_processore;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
