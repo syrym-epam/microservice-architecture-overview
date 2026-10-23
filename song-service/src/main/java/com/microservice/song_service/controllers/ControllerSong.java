@@ -1,8 +1,9 @@
-package com.microservice.song_service;
+package com.microservice.song_service.controllers;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.microservice.song_service.ServiceSong;
 import com.microservice.song_service.dto.EntitySongDTO;
 import com.microservice.song_service.dto.ResultIdDTO;
 import com.microservice.song_service.dto.ResultIdsDTO;

@@ -1,4 +1,4 @@
-package com.microservice.resource_service;
+package com.microservice.resource_service.configs;
 
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;

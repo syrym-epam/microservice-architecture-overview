@@ -1,4 +1,4 @@
-package com.microservice.resource_service;
+package com.microservice.resource_service.entities;
 
 
 import jakarta.persistence.Column;

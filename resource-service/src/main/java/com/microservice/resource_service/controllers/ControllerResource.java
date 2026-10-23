@@ -1,4 +1,4 @@
-package com.microservice.resource_service;
+package com.microservice.resource_service.controllers;
 
 
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.microservice.resource_service.dto.ResourceIdDTO;
 import com.microservice.resource_service.dto.ResourceIdsDTO;
+import com.microservice.resource_service.services.ServiceResource;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Pattern;

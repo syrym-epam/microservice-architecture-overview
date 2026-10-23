@@ -1,7 +1,8 @@
 package com.microservice.song_service.dto;
 
 
-import com.microservice.song_service.EntitySong;
+import com.microservice.song_service.entities.EntitySong;
+
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;

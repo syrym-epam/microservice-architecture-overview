@@ -1,4 +1,4 @@
-package com.microservice.resource_processore;
+package com.microservice.resource_processore.services;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Field;

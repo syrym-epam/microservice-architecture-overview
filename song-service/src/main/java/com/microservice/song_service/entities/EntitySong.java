@@ -1,4 +1,4 @@
-package com.microservice.song_service;
+package com.microservice.song_service.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

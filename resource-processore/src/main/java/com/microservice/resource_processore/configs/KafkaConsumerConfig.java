@@ -1,4 +1,4 @@
-package com.microservice.resource_processore;
+package com.microservice.resource_processore.configs;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
