@@ -40,7 +40,14 @@ services:
       - DOCKER_HOST=unix:///var/run/docker.sock
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
     volumes:
+      - "./init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
       - "/var/run/docker.sock:/var/run/docker.sock"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/init/ready | grep -q '\"completed\": true'; echo $?"]
+      interval: 7s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
   eureka-service:
     build:
       context: ./eureka-server
@@ -73,6 +80,8 @@ services:
       - "8081:8081"
     depends_on:
       resource-db:
+        condition: service_healthy
+      localstack:
         condition: service_healthy
 
   song-service:
