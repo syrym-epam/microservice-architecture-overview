@@ -35,7 +35,7 @@ public class ControllerResource {
 
     private final static String MEDIA_TYPE_MP3 = "audio/mpeg";
 
-    private ServiceResource serviceResource;
+    private final ServiceResource serviceResource;
 
     public ControllerResource(ServiceResource serviceResource) {
         this.serviceResource = serviceResource;

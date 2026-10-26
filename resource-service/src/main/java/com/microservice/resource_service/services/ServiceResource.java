@@ -72,19 +72,25 @@ public class ServiceResource {
         this.kafkaProducerService = kafkaProducerService;
     }
 
-    @PostConstruct
-    public void initBucket() {
-        try {
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
-        } catch (S3Exception e) {
-            if (e.statusCode() == 404) {
-                s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
-                System.out.println("Bucket created automatically on startup: " + bucketName);
-            } else {
-                throw e;
-            }
-        }
-    }
+    // @PostConstruct
+    // public void initBucket() {
+    //     int maxRetries = 5;
+    //     int delayMs = 3000;
+    //     for(int i = 1; i <= maxRetries; i++) {
+    //         try {
+    //             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
+    //             break;
+    //         } catch (S3Exception e) {
+    //             if (e.statusCode() == 404) {
+    //                 s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
+    //                 System.out.println("Bucket created automatically on startup: " + bucketName);
+    //             } else {
+    //                 if (i == maxRetries) throw new RuntimeException("Failed to connect to LocalStack S3 after retries", e);
+    //                 try { Thread.sleep(delayMs); } catch (InterruptedException ignored) {}
+    //             }
+    //         }
+    //     }
+    // }
 
 
     public Long preSaveResource(byte[] data, HttpServletRequest request) throws IOException {
