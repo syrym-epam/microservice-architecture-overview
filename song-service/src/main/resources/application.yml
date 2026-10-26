@@ -4,7 +4,7 @@ spring:
   application:
     name: song-service
   datasource:
-    url: "${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/song-db}"
+    url: "${POSTGRES_DB_SONG:jdbc:postgresql://localhost:5433/song-db}"
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
