@@ -3,6 +3,7 @@ package com.microservice.song_service.steps;
 import com.microservice.song_service.entities.EntitySong;
 import com.microservice.song_service.repositories.RepositorySong;
 
+import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -26,6 +27,11 @@ public class SongE2ESteps {
     private RepositorySong repositorySong;
 
     private ResultActions resultActions;
+
+    @Before
+    public void cleanUpDatabase() {
+        repositorySong.deleteAll();
+    }
 
     @When("I send a POST request to {string} with the JSON payload:")
     public void i_send_a_post_request_with_payload(String url, String jsonPayload) throws Exception {
