@@ -46,3 +46,13 @@ aws:
   access_id: "${AWS_ACCESS_KEY_ID:test}"
   access_key: "${AWS_SECRET_ACCESS_KEY:test}"
   localstack-endpoint: "${LOCALSTACK_ENDPOINT:http://localhost:4566}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

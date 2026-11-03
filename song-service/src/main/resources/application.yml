@@ -23,3 +23,13 @@ eureka:
     lease-renewal-interval-in-seconds: 5
 resource-service:
   url: "${RESOURCE_SERVICE_URL:http://localhost:8081}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

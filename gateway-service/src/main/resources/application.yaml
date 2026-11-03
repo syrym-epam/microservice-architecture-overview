@@ -36,3 +36,13 @@ eureka:
     registry-fetch-interval-seconds: 5
   instance:
     lease-renewal-interval-in-seconds: 5
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
