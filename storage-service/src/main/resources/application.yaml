@@ -1,0 +1,28 @@
+server:
+  port: 8087
+spring:
+  application:
+    name: storage-service
+  datasource:
+    url: "${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/storage-db}"
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+eureka:
+  client:
+    service-url: 
+      defaultZone: "${EUREKA_SERVICE_URL:http://localhost:8761/eureka}"
+    registry-fetch-interval-seconds: 5
+  instance:
+    lease-renewal-interval-in-seconds: 5
+aws:
+  region: us-east-1
+  access_id: "${AWS_ACCESS_KEY_ID:test}"
+  access_key: "${AWS_SECRET_ACCESS_KEY:test}"
+  localstack-endpoint: "${LOCALSTACK_ENDPOINT:http://localhost:4566}"
