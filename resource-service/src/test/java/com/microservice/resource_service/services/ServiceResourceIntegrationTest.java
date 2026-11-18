@@ -1,6 +1,7 @@
 package com.microservice.resource_service.services;
 
 import com.microservice.resource_service.entities.EntityResource;
+import com.microservice.resource_service.entities.StorageType;
 import com.microservice.resource_service.repositories.RepositoryResource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ class ServiceResourceIntegrationTest {
     void testRepositorySaveAndFind() {
         EntityResource entity = new EntityResource();
         entity.setFileName("test-audio.mp3");
+        entity.setStorageType(StorageType.STAGING);
         
         EntityResource saved = repositoryResource.save(entity);
         

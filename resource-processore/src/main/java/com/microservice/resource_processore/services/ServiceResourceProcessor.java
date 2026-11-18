@@ -23,16 +23,21 @@ public class ServiceResourceProcessor {
 
     private final RestTemplate restTemplate;
     private final DiscoveryClient discoveryClient;
+    private final KafkaProducerService kafkaProducerService;
 
-    ServiceResourceProcessor(DiscoveryClient discoveryClient) {
+    ServiceResourceProcessor(
+        DiscoveryClient discoveryClient,
+        KafkaProducerService kafkaProducerService) {
         this.restTemplate = new RestTemplate();
         this.discoveryClient = discoveryClient;
+        this.kafkaProducerService = kafkaProducerService;
     }
 
     @KafkaListener(topics = "mp3", groupId = "microservice")
     public void consumeMessage(String message) {
         System.out.println("Consumed message: " + message);
         pullMP3FileByIdFromResourceService(Long.valueOf(message));
+        kafkaProducerService.sendMessage(message);
     }
 
     public Metadata makeMetadataFromClass(Object obj) {

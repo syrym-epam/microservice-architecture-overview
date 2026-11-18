@@ -1,19 +1,18 @@
 package com.microservice.resource_service.services;
 
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.lang.reflect.Field;
+ 
+import java.io.IOException; 
 import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.List; 
 import java.util.stream.Collectors;
+
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.client.RestTemplate;
 
+import com.microservice.resource_service.dto.StorageEntityDTO;
 import com.microservice.resource_service.entities.EntityResource;
 import com.microservice.resource_service.exceptions.ContentTypeException;
 import com.microservice.resource_service.exceptions.DataNotFoundException;
@@ -24,33 +23,27 @@ import com.microservice.resource_service.repositories.RepositoryResource;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.S3Client; 
 import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse; 
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
-import jakarta.annotation.PostConstruct;
+import software.amazon.awssdk.services.s3.model.S3Exception; 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 
-import java.util.UUID;
-
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.mp3.Mp3Parser;
-import org.apache.tika.sax.BodyContentHandler;
-import org.springframework.beans.factory.annotation.Value;
+import java.util.UUID; 
+ 
+import com.microservice.resource_service.entities.StorageType;
 
 @Service 
 public class ServiceResource {
     
-    @Value("${aws.backet_name}")
-    private String bucketName;
+    // @Value("${aws.backet_name}")
+    // private String bucketName;
 
     private final S3Client s3Client;
 
@@ -60,16 +53,19 @@ public class ServiceResource {
     private final RestTemplate restTemplate;
     private final DiscoveryClient discoveryClient;
     private final KafkaProducerService kafkaProducerService;
+    private final StorageClientService storageClientService;
     
     public ServiceResource(RepositoryResource repositoryResource,
-         DiscoveryClient discoveryClient,
+        DiscoveryClient discoveryClient,
         S3Client s3Client,
-        KafkaProducerService kafkaProducerService) {
+        KafkaProducerService kafkaProducerService,
+        StorageClientService storageClientService) {
         this.repositoryResource = repositoryResource;
         this.restTemplate = new RestTemplate();
         this.discoveryClient = discoveryClient;
         this.s3Client = s3Client;
         this.kafkaProducerService = kafkaProducerService;
+        this.storageClientService = storageClientService;
     }
 
     // @PostConstruct
@@ -94,6 +90,7 @@ public class ServiceResource {
 
 
     public Long preSaveResource(byte[] data, HttpServletRequest request) throws IOException {
+        
         MimeType mimeType = MimeTypeUtils.parseMimeType(request.getContentType());
         String contentType = "%s/%s".formatted(mimeType.getType(), mimeType.getSubtype());
 
@@ -112,10 +109,12 @@ public class ServiceResource {
     public Long saveResource(byte[] data) throws IOException {
 
         String fileName = UUID.randomUUID().toString();
+        StorageEntityDTO storageEntity = storageClientService.getStorageByType(StorageType.STAGING);
+        String path = storageEntity.getPath() + fileName;
         
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(fileName)
+                .bucket(storageEntity.getBucket())
+                .key(path)
                 .contentType(MEDIA_TYPE_MP3)
                 .contentLength((long) data.length)
                 .build();
@@ -124,20 +123,14 @@ public class ServiceResource {
         
         EntityResource entityResource = new EntityResource();
         entityResource.setFileName(fileName);
+        entityResource.setPath(path);
+        entityResource.setStorageType(StorageType.STAGING);
         entityResource = repositoryResource.save(entityResource);
 
         kafkaProducerService.sendMessage(entityResource.getId().toString());
 
         return entityResource.getId();
     }
-
-    // public EntityResource getResource(Long id) {
-    //     if(!existResource(id))
-    //         throw new DataNotFoundException("Resource with ID=%d not found".formatted(id));
-    //     return  repositoryResource
-    //         .findById(id)
-    //         .orElseThrow(() -> new DataNotFoundException("Audio file with %d not found in Database".formatted(id)));
-    // }
 
     public byte[] getResource(Long id) {
         if (!existResource(id))
@@ -146,10 +139,12 @@ public class ServiceResource {
         EntityResource entityResource = repositoryResource
                 .findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Audio file with %d not found in Database".formatted(id)));
+        
+        StorageEntityDTO storageEntity = storageClientService.getStorageByType(entityResource.getStorageType());
 
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(entityResource.getFileName())
+                .bucket(storageEntity.getBucket())
+                .key(entityResource.getPath())
                 .build();
 
         try (ResponseInputStream<GetObjectResponse> s3Stream = s3Client.getObject(getObjectRequest)) {
@@ -160,47 +155,78 @@ public class ServiceResource {
         }
     }
 
-    public Metadata makeMetadataFromClass(Object obj) {
-        Metadata metadata = new Metadata();
+    public void updateResource(Long ID) {
 
-        Field[] attributes = obj.getClass().getDeclaredFields();
-        for(int i = 1; i< attributes.length; i++) {
+        EntityResource entityResource = repositoryResource
+                .findById(ID)
+                .orElseThrow(() -> new DataNotFoundException("Audio file with %d not found in Database".formatted(ID)));
+
+        StorageEntityDTO storageEntity = storageClientService.getStorageByType(StorageType.PERMANENT);
+        String path = storageEntity.getPath() + entityResource.getFileName();
+
+        var data = getResource(ID);
+        
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(storageEntity.getBucket())
+                .key(path)
+                .contentType(MEDIA_TYPE_MP3)
+                .contentLength((long) data.length)
+                .build();  
+
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(data));   
+
+        deleteResourceFromS3(entityResource.getStorageType(), entityResource.getPath());
+
+        entityResource.setPath(path);
+        entityResource.setStorageType(StorageType.PERMANENT);
+        repositoryResource.save(entityResource);
+    }
+
+    public void deleteResourceFromS3(StorageType type, String path) {
+            StorageEntityDTO storageEntity = storageClientService.getStorageByType(type);
+
+            DeleteObjectRequest request = DeleteObjectRequest.builder()
+                    .bucket(storageEntity.getBucket())
+                    .key(path)
+                    .build();
             try {
-                metadata.set(attributes[i].getName(), "" + Optional.ofNullable(attributes[i].get(obj)).orElse(""));
-            } catch (IllegalArgumentException e) {
-                continue;
-            } catch (IllegalAccessException e) {
-                continue;
+                s3Client.deleteObject(request);
+            } catch (S3Exception e) {
+                throw new S3AWSExceptions(e.getMessage());
+            }
+    }
+
+    public void deleteAllRecordsBucketByIDs(List<EntityResource> entityResources) { 
+        
+        for (StorageType type : StorageType.values()) {
+            List<ObjectIdentifier> fileNames = entityResources.stream()
+                    .filter(entity -> entity.getStorageType() == type)
+                    .map(entity -> ObjectIdentifier
+                            .builder()
+                            .key(entity.getPath())
+                            .build())
+                    .toList();
+                    
+            if(fileNames.isEmpty()) continue;
+
+            Delete delete = Delete.builder()
+                    .objects(fileNames)
+                    .quiet(false)
+                    .build();
+
+            StorageEntityDTO storageEntity = storageClientService.getStorageByType(type);
+
+            DeleteObjectsRequest request = DeleteObjectsRequest.builder()
+                    .bucket(storageEntity.getBucket())
+                    .delete(delete)
+                    .build();
+
+            try {
+                s3Client.deleteObjects(request);
+            } catch (S3Exception e) {
+                throw new S3AWSExceptions(e.getMessage());
             }
         }
-
-        return metadata;
-    }
-
-    public Optional<String> calcDurationMP3(String value) {
-        if(value == null)
-            return Optional.empty();
-        else {
-            double second = Double.parseDouble(value);
-            int totalSecs = (int) Math.round(second);
-            int mins = totalSecs / 60;
-            int secs = totalSecs % 60;
-            return Optional.of("%02d:%02d".formatted(mins, secs));
-        }
-    }
-
-    public Metadata extractMetadataFromMP3File(byte[] data){
-        Metadata metaData = new Metadata();
-        try {
-            BodyContentHandler handler = new BodyContentHandler();
-            ParseContext context = new ParseContext();
-            Mp3Parser parser = new Mp3Parser();
-            parser.parse(new ByteArrayInputStream(data), handler, metaData, context);
-        } catch(Exception e) {
-            return metaData;
-        }
-
-        return metaData;
     }
 
     @Transactional
@@ -213,28 +239,11 @@ public class ServiceResource {
 
         if (!existingIds.isEmpty()) {
 
-            List<ObjectIdentifier> fileNames = entityResources.stream()
-                    .map(entity -> ObjectIdentifier
-                            .builder()
-                            .key(entity.getFileName())
-                            .build())
-                    .toList();
-            Delete delete = Delete.builder()
-                    .objects(fileNames)
-                    .quiet(false)
-                    .build();
+            deleteAllRecordsBucketByIDs(entityResources);
 
-            DeleteObjectsRequest request = DeleteObjectsRequest.builder()
-                    .bucket(bucketName)
-                    .delete(delete)
-                    .build();
-
-            try {
-                s3Client.deleteObjects(request);
+            try { 
                 String result = existingIds.stream().map(String::valueOf).collect(Collectors.joining(","));
                 restTemplate.delete(discoveryClient.getInstances("SONG-SERVICE").getFirst().getUri() + "/songs?id=" + result);
-            } catch (S3Exception e) {
-                throw new S3AWSExceptions(e.getMessage());
             } catch (Exception e) {
                 throw new RestTemplateErrorException(e.getMessage());
             }

@@ -30,7 +30,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5   
-    # Emulator S3 Storage
+  storage-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_STORAGE}
+      POSTGRES_USER:  ${POSTGRES_USER}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./init-scripts/storage-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_SONG}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5   
   localstack:
     image: localstack/localstack:latest
     ports:
@@ -102,6 +116,8 @@ services:
         condition: service_healthy
       processore-service:
         condition: service_healthy
+      storage-service:
+        condition: service_healthy
   song-service:
     build:
       context: ./song-service
@@ -141,6 +157,32 @@ services:
       retries: 3
     depends_on:
       kafka:
+        condition: service_healthy
+  storage-service:
+    build:
+      context: ./storage-service
+      dockerfile: Dockerfile
+    deploy:
+      # mode: replicated
+      replicas: 1
+    environment:
+      - SPRING_DATASOURCE_URL=${STORAGE_SERVICE_DATASOURCE_URL}
+      - EUREKA_SERVICE_URL=${EUREKA_SERVICE_URL}
+      - LOCALSTACK_ENDPOINT=${LOCALSTACK_ENDPOINT}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - STORAGE_SERVICE_URL=${STORAGE_SERVICE_URL}
+    ports:
+      - "8087:8087"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8085/actuator/health/readiness | grep -q '\"status\":\"UP\"'; echo $?"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      storage-db:
+        condition: service_healthy
+      localstack:
         condition: service_healthy
   kafka:
     image: confluentinc/cp-kafka:7.5.0
