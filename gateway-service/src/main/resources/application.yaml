@@ -23,8 +23,11 @@ spring:
               predicates:
                 - Path=/songs, /songs/**
                 - Method=GET,POST,PUT,DELETE
-              # filters:
-              # - StripPrefix=0
+            - id: storage-route
+              uri: lb://STORAGE-SERVICE
+              predicates:
+                - Path=/storages, /storages/**
+                - Method=GET,POST,PUT,DELETE
   servlet:
     multipart:
       max-file-size: 10MB
